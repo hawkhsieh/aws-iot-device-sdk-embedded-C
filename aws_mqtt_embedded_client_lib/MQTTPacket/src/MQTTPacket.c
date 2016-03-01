@@ -20,6 +20,98 @@
 
 #include <string.h>
 
+
+
+
+char MQTTPacket_getRetain( MQTTHeader header )
+{
+    char retain = (char)header.byte;
+    dbgf("get retain=0x%x\n",retain);
+    return retain;
+}
+
+char MQTTPacket_getQos( MQTTHeader header ){
+    char qos = (char)header.byte & (0x3<<QOS_SHIFT);
+    dbgf("get qos=0x%x\n",qos);
+    return qos;
+}
+
+char MQTTPacket_getDup( MQTTHeader header ){
+    char dup = (char)header.byte & (1<<DUP_SHIFT);
+    dbgf("get dup=0x%x\n",dup);
+    return dup;
+}
+
+char MQTTPacket_getType( MQTTHeader header ){
+    char type=( (char)header.byte & (0xf<<TYPE_SHIFT))>>TYPE_SHIFT;
+    dbgf("get type=0x%x\n",type);
+    return type;
+}
+
+
+int MQTTPacket_setRetain( MQTTHeader *header , char shift ){
+
+    if ( header == 0 ){
+        errf("header is null\n");
+        return -1;
+    }
+
+    if ( shift )
+        header->byte |= (1<<RETAIN_SHIFT);
+    else
+        header->byte &= ~(1<<RETAIN_SHIFT);
+
+    dbgf("header=0x%x\n",header->byte);
+    return 0;
+}
+
+int MQTTPacket_setQos( MQTTHeader *header , char qos ){
+
+    if ( header == 0 ){
+        errf("header is null\n");
+        return -1;
+    }
+    //clear value before set
+    header->byte &= ~(3<<QOS_SHIFT);
+    header->byte |= (qos<<QOS_SHIFT);
+
+    dbgf("header=0x%x\n",header->byte);
+    return 0;
+}
+
+
+int MQTTPacket_setDup( MQTTHeader *header , char dup ){
+
+    if ( header == 0 ){
+        errf("header is null\n");
+        return -1;
+    }
+
+    if ( dup )
+        header->byte |= (1<<DUP_SHIFT);
+    else
+        header->byte &= ~(1<<DUP_SHIFT);
+
+    dbgf("header=0x%x\n",header->byte);
+    return 0;
+}
+
+int MQTTPacket_setType( MQTTHeader *header , char type ){
+
+    if ( header == 0 ){
+        errf("header is null\n");
+        return -1;
+    }
+
+    //clear value before set
+    header->byte &= ~(0xf<<TYPE_SHIFT);
+    header->byte |= (type<<TYPE_SHIFT);
+
+    dbgf("header=0x%x\n",header->byte);
+    return 0;
+}
+
+
 /**
  * Encodes the message length according to the MQTT algorithm
  * @param buf the buffer into which the encoded data is written
@@ -320,70 +412,70 @@ MQTTReturnCode MQTTPacket_InitHeader(MQTTHeader *header, MessageTypes message_ty
 			/* Should never happen */
 			return MQTT_UNKNOWN_ERROR;
 		case CONNECT:
-			header->bits.type = 0x01;
+            MQTTPacket_setType(header,0x01);
 			break;
 		case CONNACK:
-			header->bits.type = 0x02;
+            MQTTPacket_setType(header,0x02);
 			break;
 		case PUBLISH:
-			header->bits.type = 0x03;
+            MQTTPacket_setType(header,0x03);
 			break;
 		case PUBACK:
-			header->bits.type = 0x04;
+            MQTTPacket_setType(header,0x04);
 			break;
 		case PUBREC:
-			header->bits.type = 0x05;
+            MQTTPacket_setType(header,0x05);
 			break;
 		case PUBREL:
-			header->bits.type = 0x06;
+            MQTTPacket_setType(header,0x06);
 			break;
 		case PUBCOMP:
-			header->bits.type = 0x07;
+            MQTTPacket_setType(header,0x07);
 			break;
 		case SUBSCRIBE:
-			header->bits.type = 0x08;
+            MQTTPacket_setType(header,0x08);
 			break;
 		case SUBACK:
-			header->bits.type = 0x09;
+            MQTTPacket_setType(header,0x09);
 			break;
 		case UNSUBSCRIBE:
-			header->bits.type = 0x0A;
+            MQTTPacket_setType(header,0x0a);
 			break;
 		case UNSUBACK:
-			header->bits.type = 0x0B;
+            MQTTPacket_setType(header,0x0b);
 			break;
 		case PINGREQ:
-			header->bits.type = 0x0C;
+            MQTTPacket_setType(header,0x0c);
 			break;
 		case PINGRESP:
-			header->bits.type = 0x0D;
+            MQTTPacket_setType(header,0x0d);
 			break;
 		case DISCONNECT:
-			header->bits.type = 0x0E;
+            MQTTPacket_setType(header,0x0e);
 			break;
 		default:
 			/* Should never happen */
 			return MQTT_UNKNOWN_ERROR;
 	}
 
-	header->bits.dup = (1 == dup) ? 0x01 : 0x00;
+    MQTTPacket_setDup(header,(1 == dup) ? 0x01 : 0x00);
 	switch(qos) {
 		case QOS0:
-			header->bits.qos = 0x00;
+            MQTTPacket_setQos(header,0x00);
 			break;
 		case QOS1:
-			header->bits.qos = 0x01;
+            MQTTPacket_setQos(header,0x01);
 			break;
 		case QOS2:
-			header->bits.qos = 0x02;
+            MQTTPacket_setQos(header,0x02);
 			break;
 		default:
 			/* Using QOS0 as default */
-			header->bits.qos = 0x00;
+            MQTTPacket_setQos(header,0x00);
 			break;
 	}
 
-	header->bits.retain = (1 == retained) ? 0x01 : 0x00;
+    MQTTPacket_setRetain(header,(1 == retained) ? 0x01 : 0x00);
 
 	return SUCCESS;
 }

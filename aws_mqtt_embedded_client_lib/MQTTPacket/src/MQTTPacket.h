@@ -18,6 +18,8 @@
 #ifndef MQTTPACKET_H_
 #define MQTTPACKET_H_
 
+#include "aws_iot_log.h"
+
 #if defined(__cplusplus) /* If this is a C++ compiler, use C linkage */
 extern "C" {
 #endif
@@ -38,6 +40,10 @@ extern "C" {
 #include "MQTTReturnCodes.h"
 #include "MQTTMessage.h"
 
+#define RETAIN_SHIFT 0
+#define QOS_SHIFT 1
+#define DUP_SHIFT 3
+#define TYPE_SHIFT 4
 /**
  * Bitfields for the MQTT header byte.
  */
@@ -108,6 +114,16 @@ MQTTReturnCode readMQTTLenString(MQTTString *mqttstring, unsigned char **pptr, u
 void writeCString(unsigned char **pptr, const char *string);
 void writeMQTTString(unsigned char **pptr, MQTTString mqttstring);
 
+char MQTTPacket_getRetain( MQTTHeader header );
+char MQTTPacket_getQos( MQTTHeader header );
+char MQTTPacket_getDup( MQTTHeader header );
+char MQTTPacket_getType( MQTTHeader header );
+
+
+int MQTTPacket_setRetain( MQTTHeader *header , char shift );
+int MQTTPacket_setQos( MQTTHeader *header , char qos );
+int MQTTPacket_setDup( MQTTHeader *header , char dup );
+int MQTTPacket_setType( MQTTHeader *header , char type );
 #ifdef __cplusplus /* If this is a C++ compiler, use C linkage */
 }
 #endif

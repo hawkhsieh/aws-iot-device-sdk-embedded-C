@@ -162,7 +162,7 @@ int main(int argc, char** argv) {
 	connectParams.pRootCALocation = rootCA;
 	connectParams.pDeviceCertLocation = clientCRT;
 	connectParams.pDevicePrivateKeyLocation = clientKey;
-	connectParams.mqttCommandTimeout_ms = 2000;
+    connectParams.mqttCommandTimeout_ms = 5000;
 	connectParams.tlsHandshakeTimeout_ms = 5000;
 	connectParams.isSSLHostnameVerify = true; // ensure this is set to true for production
 	connectParams.disconnectHandler = disconnectCallbackHandler;
@@ -185,7 +185,7 @@ int main(int argc, char** argv) {
 
 	MQTTSubscribeParams subParams = MQTTSubscribeParamsDefault;
 	subParams.mHandler = MQTTcallbackHandler;
-	subParams.pTopic = "sdkTest/sub";
+    subParams.pTopic = "sdkTest/sub";
 	subParams.qos = QOS_0;
 
 	if (NONE_ERROR == rc) {

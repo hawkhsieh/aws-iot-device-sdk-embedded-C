@@ -46,7 +46,7 @@ static int myCertVerify(void *data, mbedtls_x509_crt *crt, int depth, uint32_t *
 	if ((*flags) == 0) {
 		DEBUG("  This certificate has no flags\n");
 	} else {
-		DEBUG(buf, sizeof(buf), "  ! ", *flags); DEBUG("%s\n", buf);
+        DEBUG( buf, sizeof(buf), "  ! ", *flags); DEBUG("%s\n", buf);
 	}
 
 	return (0);
@@ -99,11 +99,11 @@ int iot_tls_is_connected(Network *pNetwork) {
 	/* Use this to add implementation which can check for physical layer disconnect */
 	return 1;
 }
-
+//#define VERIFY
 int iot_tls_connect(Network *pNetwork, TLSConnectParams params) {
 	const char *pers = "aws_iot_tls_wrapper";
 	unsigned char buf[MBEDTLS_SSL_MAX_CONTENT_LEN + 1];
-
+#if defined (VERIFY)
 	DEBUG("  . Loading the CA root certificate ...");
 	ret = mbedtls_x509_crt_parse_file(&cacert, params.pRootCALocation);
 	if (ret < 0) {
@@ -123,6 +123,8 @@ int iot_tls_connect(Network *pNetwork, TLSConnectParams params) {
 		ERROR(" failed\n  !  mbedtls_pk_parse_key returned -0x%x\n\n", -ret);
 		return ret;
 	} DEBUG(" ok\n");
+#endif
+
 	char portBuffer[6];
 	sprintf(portBuffer, "%d", params.DestinationPort); DEBUG("  . Connecting to %s/%s...", params.pDestinationURL, portBuffer);
 	if ((ret = mbedtls_net_connect(&server_fd, params.pDestinationURL, portBuffer, MBEDTLS_NET_PROTO_TCP)) != 0) {
@@ -142,21 +144,26 @@ int iot_tls_connect(Network *pNetwork, TLSConnectParams params) {
 		ERROR(" failed\n  ! mbedtls_ssl_config_defaults returned -0x%x\n\n", -ret);
 		return ret;
 	}
-
 	mbedtls_ssl_conf_verify(&conf, myCertVerify, NULL);
+#if defined (VERIFY)
 	if (params.ServerVerificationFlag == true) {
 		mbedtls_ssl_conf_authmode(&conf, MBEDTLS_SSL_VERIFY_REQUIRED);
 	} else {
 		mbedtls_ssl_conf_authmode(&conf, MBEDTLS_SSL_VERIFY_OPTIONAL);
 	}
+#else
+	mbedtls_ssl_conf_authmode(&conf, MBEDTLS_SSL_VERIFY_OPTIONAL);
+	
+#endif
 	mbedtls_ssl_conf_rng(&conf, mbedtls_ctr_drbg_random, &ctr_drbg);
 
 	mbedtls_ssl_conf_ca_chain(&conf, &cacert, NULL);
+#if defined (VERIFY)
 	if ((ret = mbedtls_ssl_conf_own_cert(&conf, &clicert, &pkey)) != 0) {
 		ERROR(" failed\n  ! mbedtls_ssl_conf_own_cert returned %d\n\n", ret);
 		return ret;
 	}
-
+#endif
 	mbedtls_ssl_conf_read_timeout(&conf, params.timeout_ms);
 
 	if ((ret = mbedtls_ssl_setup(&ssl, &conf)) != 0) {
@@ -167,7 +174,7 @@ int iot_tls_connect(Network *pNetwork, TLSConnectParams params) {
 		ERROR(" failed\n  ! mbedtls_ssl_set_hostname returned %d\n\n", ret);
 		return ret;
 	}
-	mbedtls_ssl_set_bio(&ssl, &server_fd, mbedtls_net_send, NULL, mbedtls_net_recv_timeout);
+    mbedtls_ssl_set_bio(&ssl, &server_fd, mbedtls_net_send, mbedtls_net_recv, 0 );
 	DEBUG(" ok\n");
 
 	DEBUG("  . Performing the SSL/TLS handshake...");
@@ -193,6 +200,7 @@ int iot_tls_connect(Network *pNetwork, TLSConnectParams params) {
 		DEBUG("    [ Record expansion is unknown (compression) ]\n");
 	}
 
+#if defined (VERIFY)
 	DEBUG("  . Verifying peer X.509 certificate...");
 
 	if (params.ServerVerificationFlag == true) {
@@ -215,25 +223,44 @@ int iot_tls_connect(Network *pNetwork, TLSConnectParams params) {
 		mbedtls_x509_crt_info((char *) buf, sizeof(buf) - 1, "      ", mbedtls_ssl_get_peer_cert(&ssl));
 		DEBUG("%s\n", buf);
 	}
-
-	mbedtls_ssl_conf_read_timeout(&conf, 10);
+#else
+    ret = 0;
+#endif
+//	mbedtls_ssl_conf_read_timeout(&conf, 10);
 
 	return ret;
 }
 
+#define max(a,b) ((a)>(b)?(a):(b))
 int iot_tls_write(Network *pNetwork, unsigned char *pMsg, int len, int timeout_ms) {
 
 	int written;
 	int frags;
 
-	for (written = 0, frags = 0; written < len; written += ret, frags++) {
-		while ((ret = mbedtls_ssl_write(&ssl, pMsg + written, len - written)) <= 0) {
-			if (ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE) {
-				ERROR(" failed\n  ! mbedtls_ssl_write returned -0x%x\n\n", -ret);
-				return ret;
-			}
-		}
-	}
+    fd_set writeset;
+    int ret;
+    int maxfdp = 0;
+    FD_ZERO(&writeset);
+    FD_SET(server_fd.fd, &writeset);
+    maxfdp = max(server_fd.fd, maxfdp);
+
+    ret = select(maxfdp+1, 0, &writeset, NULL, NULL);//&timeout
+    if(ret <=0 ){
+        errf( "ret=%d\n" ,ret);
+        return -1;
+    }
+
+    if (FD_ISSET(server_fd.fd, &writeset)){
+        for (written = 0, frags = 0; written < len; written += ret, frags++) {
+            while ((ret = mbedtls_ssl_write(&ssl, pMsg + written, len - written)) <= 0) {
+                if (ret != MBEDTLS_ERR_SSL_WANT_READ && ret != MBEDTLS_ERR_SSL_WANT_WRITE) {
+                    ERROR(" failed\n  ! mbedtls_ssl_write returned -0x%x\n\n", -ret);
+                    return ret;
+                }
+            }
+        }
+
+    }
 	return written;
 }
 
@@ -242,15 +269,20 @@ int iot_tls_read(Network *pNetwork, unsigned char *pMsg, int len, int timeout_ms
 	bool isErrorFlag = false;
 	bool isCompleteFlag = false;
 
-//	mbedtls_ssl_conf_read_timeout(&conf, timeout_ms);
+//    mbedtls_ssl_conf_read_timeout(&conf, timeout_ms);
 
 	do {
 		ret = mbedtls_ssl_read(&ssl, pMsg, len);
-		if (ret > 0) {
-			rxLen += ret;
-		} else if (ret != MBEDTLS_ERR_SSL_WANT_READ) {
-			isErrorFlag = true;
-		}
+        if (ret > 0) {
+            dbgf("read %d bytes\n",ret);
+            rxLen += ret;
+        }else if (ret == MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY ) {
+            dbgf("reset by peer\n" );
+            break;
+        }else if (ret != MBEDTLS_ERR_SSL_WANT_READ ) {
+            dbgf("ret = %d\n",ret);
+            isErrorFlag = true;
+        }
 		if (rxLen >= len) {
 			isCompleteFlag = true;
 		}

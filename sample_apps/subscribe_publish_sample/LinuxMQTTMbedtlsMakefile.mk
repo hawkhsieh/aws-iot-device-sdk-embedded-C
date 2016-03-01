@@ -1,4 +1,5 @@
-CC = gcc
+CC = mips-linux-uclibc-gcc
+#CC = gcc
 
 #remove @ for no make command prints
 DEBUG=@
@@ -36,12 +37,12 @@ MQTT_SRC_FILES += $(MQTT_C_DIR)/MQTTClient.c
 
 
 #TLS - mbedtls
-MBEDTLS_DIR=../../mbedtls_lib
+MBEDTLS_DIR=../../../mbedtls
 TLS_LIB_DIR = $(MBEDTLS_DIR)/library
 TLS_INCLUDE_DIR = -I $(MBEDTLS_DIR)/include
 EXTERNAL_LIBS += -L$(TLS_LIB_DIR)
 LD_FLAG += -Wl,-rpath,$(TLS_LIB_DIR)
-LD_FLAG += -ldl $(TLS_LIB_DIR)/libmbedtls.a $(TLS_LIB_DIR)/libmbedcrypto.a $(TLS_LIB_DIR)/libmbedx509.a
+LD_FLAG += -ldl $(TLS_LIB_DIR)/libmbedtls.a $(TLS_LIB_DIR)/libmbedx509.a $(TLS_LIB_DIR)/libmbedcrypto.a
 
 
 #Aggregate all include and src directories

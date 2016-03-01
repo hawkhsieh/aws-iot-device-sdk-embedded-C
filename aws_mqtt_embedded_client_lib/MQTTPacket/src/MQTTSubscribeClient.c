@@ -126,7 +126,7 @@ MQTTReturnCode MQTTDeserialize_suback(uint16_t *packetid, uint32_t maxcount,
 	}
 
 	header.byte = readChar(&curdata);
-	if (header.bits.type != SUBACK) {
+    if ( MQTTPacket_getType( header ) != SUBACK) {
 		FUNC_EXIT_RC(FAILURE);
 		return FAILURE;
 	}

@@ -19,6 +19,14 @@
 
 #include <string.h>
 
+
+char MQTTConnect_getWillQos(char header ){
+    char willqos = header & (0x3<<WILLQOS_SHIFT);
+    infof("willqos=0x%x\n",willqos);
+    return willqos;
+}
+
+
 /**
   * Determines the length of the MQTT connect packet that would be produced using the supplied connect options.
   * @param options the options to be used to build the connect packet
@@ -101,19 +109,19 @@ MQTTReturnCode MQTTSerialize_connect(unsigned char *buf, size_t buflen,
 	}
 
 	flags.all = 0;
-	flags.bits.cleansession = (options->cleansession) ? 1 : 0;
-	flags.bits.will = (options->willFlag) ? 1 : 0;
-	if(flags.bits.will) {
-		flags.bits.willQoS = options->will.qos;
-		flags.bits.willRetain = (options->will.retained) ? 1 : 0;
+    flags.all |= (options->cleansession << CLEANSESSION_SHIFT);
+    flags.all |= (options->willFlag << WILL_SHIFT);
+    if(flags.all & (1<<WILL_SHIFT)) {
+        flags.all |= (options->will.qos << WILLQOS_SHIFT);
+        flags.all |= (options->will.retained << WILLRETAIN_SHIFT);
 	}
 
-	if(options->username.cstring || options->username.lenstring.data) {
-		flags.bits.username = 1;
-	}
+    if(options->username.cstring || options->username.lenstring.data) {
+        flags.all |= (1<<USERNAME_SHIFT);
+    }
 
 	if(options->password.cstring || options->password.lenstring.data) {
-		flags.bits.password = 1;
+        flags.all |= (1<<PASSWORD_SHIFT);
 	}
 
 	writeChar(&ptr, flags.all);
@@ -124,11 +132,11 @@ MQTTReturnCode MQTTSerialize_connect(unsigned char *buf, size_t buflen,
 		writeMQTTString(&ptr, options->will.message);
 	}
 
-	if(flags.bits.username) {
+    if (flags.all & (1<<USERNAME_SHIFT) ) {
 		writeMQTTString(&ptr, options->username);
 	}
 
-	if(flags.bits.password) {
+    if (flags.all & (1<<PASSWORD_SHIFT) ) {
 		writeMQTTString(&ptr, options->password);
 	}
 
@@ -172,7 +180,7 @@ MQTTReturnCode MQTTDeserialize_connack(unsigned char *sessionPresent,
 	MQTTConnackFlags flags = {0};
 
 	header.byte = readChar(&curdata);
-	if(CONNACK != header.bits.type) {
+    if ( MQTTPacket_getType(header) != CONNACK){
 		FUNC_EXIT_RC(FAILURE);
 		return FAILURE;
 	}
@@ -192,7 +200,7 @@ MQTTReturnCode MQTTDeserialize_connack(unsigned char *sessionPresent,
 	}
 
 	flags.all = readChar(&curdata);
-	*sessionPresent = flags.bits.sessionpresent;
+    *sessionPresent = flags.all & (1<<SESSIONPRESENT_SHIFT);
 	unsigned char connack_rc_char = readChar(&curdata);
 	switch(connack_rc_char) {
 		case CONNACK_CONNECTION_ACCEPTED:

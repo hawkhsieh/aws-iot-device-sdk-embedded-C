@@ -25,6 +25,13 @@
   #define DLLExport
 #endif
 
+#define NOUSE              0
+#define CLEANSESSION_SHIFT 1
+#define WILL_SHIFT         2
+#define WILLQOS_SHIFT      3
+#define WILLRETAIN_SHIFT   5
+#define PASSWORD_SHIFT     6
+#define USERNAME_SHIFT     7
 
 typedef union {
 	uint8_t all;	/**< all connect flags */
@@ -99,6 +106,8 @@ typedef struct {
 	MQTTString password;
 } MQTTPacket_connectData;
 
+#define SESSIONPRESENT_SHIFT 7
+
 typedef union
 {
 	uint8_t all;	/**< all connack flags */
@@ -142,5 +151,6 @@ DLLExport MQTTReturnCode MQTTSerialize_disconnect(unsigned char *buf, size_t buf
 
 DLLExport MQTTReturnCode MQTTSerialize_pingreq(unsigned char *buf, size_t buflen,
 											   uint32_t *serialized_length);
+char MQTTConnect_getWillQos(char header );
 
 #endif /* MQTTCONNECT_H_ */

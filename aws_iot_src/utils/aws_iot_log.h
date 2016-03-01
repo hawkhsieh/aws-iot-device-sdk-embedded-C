@@ -31,6 +31,35 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+enum {
+
+    LV_ERROR,
+    LV_INFO,
+    LV_DEBUG
+
+}Level;
+
+extern char gLevel;
+
+#define dbgf( fmt, args...  ) \
+    do {\
+    if ( gLevel >= LV_DEBUG ) \
+        printf( "(%s:%d): " fmt , __FILE__ , __LINE__,##args);\
+    } while(0)
+
+
+#define infof( fmt, args...  ) \
+    do {\
+    if ( gLevel >= LV_INFO ) \
+        printf( "(%s:%d): " fmt , __FILE__ , __LINE__,##args);\
+    } while(0)
+
+#define errf( fmt, args...  ) \
+    do {\
+    printf( "(%s:%d)[ERR]:" fmt , __FILE__ , __LINE__,##args);\
+    } while(0)
+
+
 /**
  * @brief Debug level logging macro.
  *
