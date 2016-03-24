@@ -562,9 +562,9 @@ MQTTReturnCode MQTTYield(Client *c, uint32_t timeout_ms) {
              * doing anything else */
             continue;
         }
-
         rc = cycle(c, &timer, &packet_type);
         if(SUCCESS != rc) {
+            errf("cycle=%d\n",rc);
             break;
         }
 

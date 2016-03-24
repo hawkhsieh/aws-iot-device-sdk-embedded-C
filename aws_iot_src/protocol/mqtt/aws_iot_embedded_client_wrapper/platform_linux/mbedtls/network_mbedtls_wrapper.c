@@ -174,7 +174,7 @@ int iot_tls_connect(Network *pNetwork, TLSConnectParams params) {
 		ERROR(" failed\n  ! mbedtls_ssl_set_hostname returned %d\n\n", ret);
 		return ret;
 	}
-    mbedtls_ssl_set_bio(&ssl, &server_fd, mbedtls_net_send, mbedtls_net_recv, 0 );
+    mbedtls_ssl_set_bio(&ssl, &server_fd, mbedtls_net_send, mbedtls_net_recv, mbedtls_net_recv_timeout );
 	DEBUG(" ok\n");
 
 	DEBUG("  . Performing the SSL/TLS handshake...");
@@ -226,7 +226,7 @@ int iot_tls_connect(Network *pNetwork, TLSConnectParams params) {
 #else
     ret = 0;
 #endif
-//	mbedtls_ssl_conf_read_timeout(&conf, 10);
+    mbedtls_ssl_conf_read_timeout(&conf, 10);
 
 	return ret;
 }
@@ -269,7 +269,7 @@ int iot_tls_read(Network *pNetwork, unsigned char *pMsg, int len, int timeout_ms
 	bool isErrorFlag = false;
 	bool isCompleteFlag = false;
 
-//    mbedtls_ssl_conf_read_timeout(&conf, timeout_ms);
+    mbedtls_ssl_conf_read_timeout(&conf, timeout_ms);
 
 	do {
 		ret = mbedtls_ssl_read(&ssl, pMsg, len);
@@ -281,12 +281,13 @@ int iot_tls_read(Network *pNetwork, unsigned char *pMsg, int len, int timeout_ms
             break;
         }else if (ret != MBEDTLS_ERR_SSL_WANT_READ ) {
             dbgf("ret = %d\n",ret);
+            sleep(1);
             isErrorFlag = true;
         }
 		if (rxLen >= len) {
 			isCompleteFlag = true;
 		}
-	} while (!isErrorFlag && !isCompleteFlag);
+    } while ( !isErrorFlag && !isCompleteFlag);
 
 	return ret;
 }
