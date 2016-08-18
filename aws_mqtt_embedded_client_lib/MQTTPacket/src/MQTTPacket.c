@@ -26,25 +26,25 @@
 char MQTTPacket_getRetain( MQTTHeader header )
 {
     char retain = (char)header.byte;
-    dbgf("get retain=0x%x\n",retain);
+    iotdbgf("get retain=0x%x\n",retain);
     return retain;
 }
 
 char MQTTPacket_getQos( MQTTHeader header ){
     char qos = (char)header.byte & (0x3<<QOS_SHIFT);
-    dbgf("get qos=0x%x\n",qos);
+    iotdbgf("get qos=0x%x\n",qos);
     return qos;
 }
 
 char MQTTPacket_getDup( MQTTHeader header ){
     char dup = (char)header.byte & (1<<DUP_SHIFT);
-    dbgf("get dup=0x%x\n",dup);
+    iotdbgf("get dup=0x%x\n",dup);
     return dup;
 }
 
 char MQTTPacket_getType( MQTTHeader header ){
     char type=( (char)header.byte & (0xf<<TYPE_SHIFT))>>TYPE_SHIFT;
-    dbgf("get type=0x%x\n",type);
+    iotdbgf("get type=0x%x\n",type);
     return type;
 }
 
@@ -52,7 +52,7 @@ char MQTTPacket_getType( MQTTHeader header ){
 int MQTTPacket_setRetain( MQTTHeader *header , char shift ){
 
     if ( header == 0 ){
-        errf("header is null\n");
+        ioterrf("header is null\n");
         return -1;
     }
 
@@ -61,21 +61,21 @@ int MQTTPacket_setRetain( MQTTHeader *header , char shift ){
     else
         header->byte &= ~(1<<RETAIN_SHIFT);
 
-    dbgf("header=0x%x\n",header->byte);
+    iotdbgf("header=0x%x\n",header->byte);
     return 0;
 }
 
 int MQTTPacket_setQos( MQTTHeader *header , char qos ){
 
     if ( header == 0 ){
-        errf("header is null\n");
+        ioterrf("header is null\n");
         return -1;
     }
     //clear value before set
     header->byte &= ~(3<<QOS_SHIFT);
     header->byte |= (qos<<QOS_SHIFT);
 
-    dbgf("header=0x%x\n",header->byte);
+    iotdbgf("header=0x%x\n",header->byte);
     return 0;
 }
 
@@ -83,7 +83,7 @@ int MQTTPacket_setQos( MQTTHeader *header , char qos ){
 int MQTTPacket_setDup( MQTTHeader *header , char dup ){
 
     if ( header == 0 ){
-        errf("header is null\n");
+        ioterrf("header is null\n");
         return -1;
     }
 
@@ -92,14 +92,14 @@ int MQTTPacket_setDup( MQTTHeader *header , char dup ){
     else
         header->byte &= ~(1<<DUP_SHIFT);
 
-    dbgf("header=0x%x\n",header->byte);
+    iotdbgf("header=0x%x\n",header->byte);
     return 0;
 }
 
 int MQTTPacket_setType( MQTTHeader *header , char type ){
 
     if ( header == 0 ){
-        errf("header is null\n");
+        ioterrf("header is null\n");
         return -1;
     }
 
@@ -107,7 +107,7 @@ int MQTTPacket_setType( MQTTHeader *header , char type ){
     header->byte &= ~(0xf<<TYPE_SHIFT);
     header->byte |= (type<<TYPE_SHIFT);
 
-    dbgf("header=0x%x\n",header->byte);
+    iotdbgf("header=0x%x\n",header->byte);
     return 0;
 }
 

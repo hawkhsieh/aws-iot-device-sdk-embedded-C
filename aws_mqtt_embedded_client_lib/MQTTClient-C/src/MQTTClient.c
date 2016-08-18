@@ -41,7 +41,7 @@ MQTTReturnCode sendPacket(Client *c, uint32_t length, Timer *timer) {
     uint32_t sent = 0;
 
     if(length >= c->bufSize) {
-        errf("MQTTPACKET_BUFFER_TOO_SHORT\n");
+        ioterrf("MQTTPACKET_BUFFER_TOO_SHORT\n");
     	return MQTTPACKET_BUFFER_TOO_SHORT;
     }
 
@@ -49,7 +49,7 @@ MQTTReturnCode sendPacket(Client *c, uint32_t length, Timer *timer) {
         sentLen = c->networkStack.mqttwrite(&(c->networkStack), &c->buf[sent], (int)length, left_ms(timer));
         if(sentLen < 0) {
             /* there was an error writing the data */
-            errf("sentLen=%d\n",sentLen);
+            ioterrf("sentLen=%d\n",sentLen);
             break;
         }
         sent = sent + (uint32_t)sentLen;
@@ -152,7 +152,7 @@ MQTTReturnCode decodePacket(Client *c, uint32_t *value, uint32_t timeout) {
         if((c->networkStack.mqttread(&(c->networkStack), &i, 1, (int)timeout)) != 1) {
             /* The value argument is the important value. len is just used temporarily
              * and never used by the calling function for anything else */
-             errf("read failed\n");
+             ioterrf("read failed\n");
             return FAILURE;
         }
 
@@ -207,7 +207,7 @@ MQTTReturnCode readPacket(Client *c, Timer *timer, uint8_t *packet_type) {
 					bytes_to_be_read = rem_len - total_bytes_read;
 				}
             }else
-                errf("read failed\n");
+                ioterrf("read failed\n");
 		} while (total_bytes_read < rem_len && ret_val > 0);
 		return MQTTPACKET_BUFFER_TOO_SHORT;
 	}
@@ -217,7 +217,7 @@ MQTTReturnCode readPacket(Client *c, Timer *timer, uint8_t *packet_type) {
 
     /* 3. read the rest of the buffer using a callback to supply the rest of the data */
     if(rem_len > 0 && (c->networkStack.mqttread(&(c->networkStack), c->readbuf + len, (int)rem_len, left_ms(timer)) != (int)rem_len)) {
-                 errf("read failed\n");
+                 ioterrf("read failed\n");
         return FAILURE;
     }
 
@@ -564,7 +564,7 @@ MQTTReturnCode MQTTYield(Client *c, uint32_t timeout_ms) {
         }
         rc = cycle(c, &timer, &packet_type);
         if(SUCCESS != rc) {
-            errf("cycle=%d\n",rc);
+            ioterrf("cycle=%d\n",rc);
             break;
         }
 
@@ -595,7 +595,7 @@ MQTTReturnCode waitfor(Client *c, uint8_t packet_type, Timer *timer) {
     uint8_t read_packet_type = 0;
     do {
         if(expired(timer)) {
-            errf("expired\n");
+            ioterrf("expired\n");
             /* we timed out */
             break;
         }
@@ -603,7 +603,7 @@ MQTTReturnCode waitfor(Client *c, uint8_t packet_type, Timer *timer) {
     }while(MQTT_NETWORK_DISCONNECTED_ERROR != rc  && read_packet_type != packet_type);
 
     if(MQTT_NETWORK_DISCONNECTED_ERROR != rc && read_packet_type != packet_type) {
-        errf("rc=%d read_packet_type=%d packet_type=%d\n",rc,read_packet_type,packet_type);
+        ioterrf("rc=%d read_packet_type=%d packet_type=%d\n",rc,read_packet_type,packet_type);
         return FAILURE;
     }
 
@@ -639,40 +639,40 @@ MQTTReturnCode MQTTConnect(Client *c, MQTTPacket_connectData *options) {
     rc = c->networkStack.connect(&(c->networkStack), c->tlsConnectParams);
     if(0 != rc) {
         /* TLS Connect failed, return error */
-        errf("rc=%d\n",rc);
+        ioterrf("rc=%d\n",rc);
         return FAILURE;
     }
 
     c->keepAliveInterval = c->options.keepAliveInterval;
     rc = MQTTSerialize_connect(c->buf, c->bufSize, &(c->options), &len);
     if(SUCCESS != rc || 0 >= len) {
-        errf("rc=%d\n",rc);
+        ioterrf("rc=%d\n",rc);
         return FAILURE;
     }
 
     /* send the connect packet */
     rc = sendPacket(c, len, &connect_timer);
     if(SUCCESS != rc) {
-        errf("rc=%d\n",rc);
+        ioterrf("rc=%d\n",rc);
         return rc;
     }
 
     /* this will be a blocking call, wait for the CONNACK */
     rc = waitfor(c, CONNACK, &connect_timer);
     if(SUCCESS != rc) {
-        errf("rc=%d\n",rc);
+        ioterrf("rc=%d\n",rc);
         return rc;
     }
 
     /* Received CONNACK, check the return code */
     rc = MQTTDeserialize_connack((unsigned char *)&sessionPresent, &connack_rc, c->readbuf, c->readBufSize);
     if(SUCCESS != rc) {
-        errf("rc=%d\n",rc);
+        ioterrf("rc=%d\n",rc);
         return rc;
     }
 
     if(MQTT_CONNACK_CONNECTION_ACCEPTED != connack_rc) {
-        errf("rc=%d\n",rc);
+        ioterrf("rc=%d\n",rc);
         return connack_rc;
     }
 
@@ -734,21 +734,21 @@ MQTTReturnCode MQTTSubscribe(Client *c, const char *topicFilter, QoS qos,
     /* send the subscribe packet */
     rc = sendPacket(c, len, &timer);
     if(SUCCESS != rc) {
-        errf("error\n");
+        ioterrf("error\n");
         return rc;
     }
 
     /* wait for suback */
     rc = waitfor(c, SUBACK, &timer);
     if(SUCCESS != rc) {
-        errf("error\n");
+        ioterrf("error\n");
         return rc;
     }
 
     /* Granted QoS can be 0, 1 or 2 */
     rc = MQTTDeserialize_suback(&packetId, 1, &count, grantedQoS, c->readbuf, c->readBufSize);
     if(SUCCESS != rc) {
-        errf("rc=%d\n",rc);
+        ioterrf("rc=%d\n",rc);
         return rc;
     }
 

@@ -246,7 +246,7 @@ int iot_tls_write(Network *pNetwork, unsigned char *pMsg, int len, int timeout_m
 
     ret = select(maxfdp+1, 0, &writeset, NULL, NULL);//&timeout
     if(ret <=0 ){
-        errf( "ret=%d\n" ,ret);
+        ioterrf( "ret=%d\n" ,ret);
         return -1;
     }
 
@@ -274,13 +274,13 @@ int iot_tls_read(Network *pNetwork, unsigned char *pMsg, int len, int timeout_ms
 	do {
 		ret = mbedtls_ssl_read(&ssl, pMsg, len);
         if (ret > 0) {
-            dbgf("read %d bytes\n",ret);
+            iotdbgf("read %d bytes\n",ret);
             rxLen += ret;
         }else if (ret == MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY ) {
-            dbgf("reset by peer\n" );
+            iotdbgf("reset by peer\n" );
             break;
         }else if (ret != MBEDTLS_ERR_SSL_WANT_READ ) {
-            dbgf("ret = %d\n",ret);
+            iotdbgf("ret = %d\n",ret);
             sleep(1);
             isErrorFlag = true;
         }

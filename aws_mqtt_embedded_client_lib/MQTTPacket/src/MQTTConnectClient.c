@@ -22,7 +22,7 @@
 
 char MQTTConnect_getWillQos(char header ){
     char willqos = header & (0x3<<WILLQOS_SHIFT);
-    infof("willqos=0x%x\n",willqos);
+    iotinfof("willqos=0x%x\n",willqos);
     return willqos;
 }
 
